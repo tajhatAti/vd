@@ -51,12 +51,37 @@ const dirConfig = path.normalize(`${__dirname}/config${['production', 'developme
 const dirConfigCommands = path.normalize(`${__dirname}/configCommands${['production', 'development'].includes(NODE_ENV) ? '.dev.json' : '.json'}`);
 const dirAccount = path.normalize(`${__dirname}/account${['production', 'development'].includes(NODE_ENV) ? '.dev.txt' : '.txt'}`);
 
+// Automatically clone files if we are in production or development and dev files are missing
+if (['production', 'development'].includes(NODE_ENV)) {
+	const configPath = path.normalize(`${__dirname}/config.json`);
+	const configCommandsPath = path.normalize(`${__dirname}/configCommands.json`);
+	const accountPath = path.normalize(`${__dirname}/account.txt`);
+
+	if (!fs.existsSync(dirConfig) && fs.existsSync(configPath)) {
+		fs.copySync(configPath, dirConfig);
+		log.info("CONFIG", "Automatically cloned config.json to " + path.basename(dirConfig));
+	}
+	if (!fs.existsSync(dirConfigCommands) && fs.existsSync(configCommandsPath)) {
+		fs.copySync(configCommandsPath, dirConfigCommands);
+		log.info("CONFIG", "Automatically cloned configCommands.json to " + path.basename(dirConfigCommands));
+	}
+	if (!fs.existsSync(dirAccount) && fs.existsSync(accountPath)) {
+		const accountContent = fs.readFileSync(accountPath, "utf8");
+		if (accountContent.trim() && accountContent.trim() !== "[]") {
+			fs.copySync(accountPath, dirAccount);
+			log.info("CONFIG", "Automatically cloned account.txt to " + path.basename(dirAccount));
+		}
+	}
+}
+
 // Check and write AppState/Cookies from Environment Variable if provided
 const envAppState = process.env.ACCOUNT_COOKIES || process.env.APPSTATE;
 if (envAppState) {
 	try {
 		const appStateContent = envAppState.trim();
 		fs.writeFileSync(dirAccount, appStateContent, "utf8");
+		// Also write to account.txt as fallback
+		fs.writeFileSync(path.normalize(`${__dirname}/account.txt`), appStateContent, "utf8");
 		log.info("ENVIRONMENT", "Successfully loaded Facebook cookies from environment variable.");
 	} catch (err) {
 		log.warn("ENVIRONMENT", "Failed to write cookies from environment variable to " + path.basename(dirAccount));
@@ -304,7 +329,7 @@ if (config.autoRestart) {
 		}
 	}
 	// ———————————————————— LOGIN ———————————————————— //
-	require(`./bot/login/login${NODE_ENV === 'development' ? '.dev.js' : '.js'}`);
+	require(`./bot/login/login${NODE_ENV === 'development' && fs.existsSync(path.normalize(`${__dirname}/bot/login/login.dev.js`)) ? '.dev.js' : '.js'}`);
 })();
 
 function compareVersion(version1, version2) {
