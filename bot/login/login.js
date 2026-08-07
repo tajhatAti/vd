@@ -1098,7 +1098,7 @@ async function startBot(loginWithEmail) {
 				} catch (err) {
 					log.warn("UPTIME", "Could not fetch homepage HTML from GitHub. Using local fallback HTML.");
 				}
-				const PORT = global.GoatBot.config.dashBoard?.port || (!isNaN(global.GoatBot.config.serverUptime.port) && global.GoatBot.config.serverUptime.port) || 3001;
+				const PORT = process.env.PORT || global.GoatBot.config.dashBoard?.port || (!isNaN(global.GoatBot.config.serverUptime.port) && global.GoatBot.config.serverUptime.port) || 3001;
 				app.get('/', (req, res) => res.send(html));
 				app.get('/uptime', global.responseUptimeCurrent);
 				let nameUpTime;
